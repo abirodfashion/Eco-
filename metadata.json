@@ -1,0 +1,7 @@
+{
+  "name": "Eco Dairy Farm",
+  "description": "A comprehensive role-based web application for an organic and fresh dairy farm management system.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

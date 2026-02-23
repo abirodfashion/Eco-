@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco Dairy Farm</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="font-sans text-slate-900 bg-white overflow-x-hidden antialiased">
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 md:h-20 flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="showView('home')">
+                <img src="https://scontent.fspd3-1.fna.fbcdn.net/v/t39.30808-6/636856053_122093875569285093_6442118386641895876_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=109&ccb=1-7&_nc_sid=1d70fc&_nc_ohc=LU_Bs78Q-WsQ7kNvwFvu4Fy&_nc_oc=Adlm0RhoFOG5k10IPSh3nsnqb7EEW6cmcI8NVZ8PBQRKUpmwpA7YCFUL4kRyqjxf7qc&_nc_zt=23&_nc_ht=scontent.fspd3-1.fna&_nc_gid=8ywDWztAeDizUAKZZaMxgA&oh=00_AftpN_WSbQgLu7y3yCT8cx-NK4_XES9YDtWbfqbcdrmixg&oe=69A1E181" alt="Eco Dairy Logo" class="w-10 h-10 md:w-12 md:h-12 object-contain">
+                <span class="text-lg md:text-xl font-serif font-bold text-farm-green">Eco Dairy</span>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button id="langToggle" class="flex items-center gap-2 px-4 py-2 rounded-full bg-farm-light text-farm-green font-bold text-sm hover:bg-farm-green hover:text-white transition-all">
+                    <i data-lucide="globe" class="w-4 h-4"></i>
+                    <span id="langText">বাংলা</span>
+                </button>
+                <button id="menuToggle" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                    <i data-lucide="menu" class="w-8 h-8"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hamburger Menu Sidebar -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <div id="sidebar" class="fixed top-0 right-0 h-full w-full sm:w-96 bg-farm-green text-white z-[70] p-12 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out">
+        <button id="closeSidebar" class="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full">
+            <i data-lucide="x" class="w-8 h-8"></i>
+        </button>
+
+        <div class="flex flex-col h-full">
+            <div class="space-y-6 mt-12" id="navLinks">
+                <a href="#home" class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform" data-t="home">Home</a>
+                <a href="#about" class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform" data-t="about">About Us</a>
+                <a href="#info" class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform" data-t="info">Information</a>
+                <a href="#gallery" class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform" data-t="gallery">Gallery</a>
+                <a href="#contact" class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform" data-t="contact">Contact</a>
+                <button id="dashLink" onclick="showView('dashboard')" class="hidden block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform text-left w-full text-farm-accent" data-t="dashboard">Dashboard</button>
+                <button id="loginCreateBtn" onclick="showView('login')" class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform text-left w-full" data-t="loginCreate">Login / Create Account</button>
+                <button class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform text-left w-full" data-t="settings">Settings</button>
+                <button id="adminLoginBtn" onclick="showView('adminLogin')" class="block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform text-left w-full text-amber-300" data-t="adminLogin">Admin Login</button>
+                <button id="logoutBtn" class="hidden block text-2xl md:text-3xl font-serif hover:translate-x-4 transition-transform text-left w-full text-red-300" data-t="logout">Logout</button>
+            </div>
+
+            <div class="mt-auto space-y-4" id="sidebarAuthButtons">
+                <button onclick="showView('login')" class="w-full bg-white text-farm-green py-4 rounded-2xl font-bold text-lg md:text-xl hover:bg-farm-light transition-colors" data-t="login">Login</button>
+                <button onclick="showView('register')" class="w-full border-2 border-white/30 py-4 rounded-2xl font-bold text-lg md:text-xl hover:bg-white/10 transition-colors" data-t="create">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="app">
+        <!-- Views will be injected here -->
+    </div>
+
+    <!-- Modals -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div id="modalContent" class="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl relative scale-90 transition-transform duration-300">
+            <button onclick="closeModal()" class="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <div id="modalBody">
+                <!-- Modal content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Password Confirmation Modal -->
+    <div id="confirmOverlay" class="fixed inset-0 bg-black/60 z-[120] hidden items-center justify-center p-4 backdrop-blur-md opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl text-center scale-90 transition-transform duration-300">
+            <h3 class="text-2xl font-serif font-bold text-slate-900 mb-2">Confirm Admin Password</h3>
+            <p class="text-slate-500 text-sm mb-8">Please enter your admin password to save changes.</p>
+            <input type="password" id="confirmPasswordInput" placeholder="Enter Admin Password" class="w-full pl-6 pr-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all mb-8 text-center font-bold tracking-widest">
+            <div class="flex gap-4">
+                <button onclick="closeConfirmModal()" class="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all">Cancel</button>
+                <button id="confirmSaveBtn" class="flex-1 py-4 rounded-2xl font-bold text-white bg-farm-green hover:bg-emerald-700 transition-all shadow-lg shadow-farm-green/20">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entrepreneur Popup Modal -->
+    <div id="entrepreneurModal" class="fixed inset-0 bg-black/60 z-[110] hidden items-center justify-center p-4 backdrop-blur-md opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl relative scale-90 transition-transform duration-300">
+            <button onclick="closeEntrepreneurModal()" class="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold text-slate-900 mb-2">উদ্যোক্তা হতে ফার্ম ম্যানেজার এর সাথে যোগাযোগ করুন</h3>
+                <div class="w-16 h-1 bg-farm-green mx-auto rounded-full"></div>
+            </div>
+            
+            <div class="space-y-6">
+                <div class="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <p class="font-bold text-lg text-slate-800 mb-4">MD RAFIK HOSSAIN</p>
+                    <a href="https://wa.me/8801590018360" target="_blank" class="flex items-center justify-center gap-3 w-full bg-[#25D366] text-white py-3 rounded-2xl font-bold hover:opacity-90 transition-all">
+                        <i data-lucide="message-square" class="w-5 h-5"></i>
+                        Continue WhatsApp
+                    </a>
+                </div>
+                <div class="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <p class="font-bold text-lg text-slate-800 mb-4">MD SAGAR HOSEN</p>
+                    <a href="https://wa.me/8801723447229" target="_blank" class="flex items-center justify-center gap-3 w-full bg-[#25D366] text-white py-3 rounded-2xl font-bold hover:opacity-90 transition-all">
+                        <i data-lucide="message-square" class="w-5 h-5"></i>
+                        Continue WhatsApp
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-8 flex gap-4">
+                <button onclick="closeEntrepreneurModal()" class="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-all">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="home-template">
+        <section id="home" class="relative h-screen flex items-center overflow-hidden">
+            <div class="absolute inset-0 z-0">
+                <img src="https://picsum.photos/seed/farm/1920/1080" alt="Farm Background" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/40"></div>
+            </div>
+            <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full">
+                <div class="max-w-3xl">
+                    <span class="inline-block px-4 py-1 bg-farm-accent text-white rounded-full text-[10px] md:text-xs font-bold mb-4 md:mb-6 tracking-widest uppercase" data-t="subtitle">Organic & Fresh Dairy Products</span>
+                    <h1 class="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-4 md:mb-8 leading-tight" data-t="heroTitle">Eco Dairy <br><span class="text-farm-accent italic">Farm</span></h1>
+                    <p class="text-base md:text-lg text-white/90 mb-8 md:mb-12 max-w-xl leading-relaxed" data-t="heroDesc">Experience the purity of nature with our organic dairy products. Fresh from our farm to your table, every day.</p>
+                    <div class="flex flex-wrap gap-4 md:gap-6">
+                        <button onclick="showView('login')" class="glossy-button px-6 md:px-10 py-3 md:py-4 text-sm md:text-base" data-t="getStarted">Get Started</button>
+                        <a href="#about" class="px-6 md:px-10 py-3 md:py-4 text-sm md:text-base text-white border-2 border-white/30 rounded-full font-bold hover:bg-white/10 transition-all" data-t="learnMore">Learn More</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="py-16 md:py-24 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
+                    <div class="relative">
+                        <img src="https://picsum.photos/seed/cow/800/600" alt="Modern Farming" class="rounded-3xl shadow-2xl w-full">
+                        <div class="absolute -bottom-6 -right-6 bg-farm-green p-6 md:p-8 rounded-3xl text-white hidden md:block">
+                            <p class="text-3xl md:text-4xl font-bold mb-1">15+</p>
+                            <p class="text-xs md:text-sm opacity-80">Years of Excellence</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl md:text-4xl font-serif font-bold text-slate-900 mb-6 md:mb-8 leading-tight" data-t="aboutTitle">আধুনিক ডেইরি ফার্মিং ও স্বাস্থ্যকর গরু পালন</h2>
+                        <div class="space-y-4 md:space-y-6" id="aboutFeatures">
+                            <!-- Features injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="info" class="py-16 md:py-24 bg-farm-light">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="text-center mb-12 md:mb-16">
+                    <h2 class="text-2xl md:text-4xl font-serif font-bold text-slate-900 mb-4" data-t="coreFeatures">Our Core Features</h2>
+                    <p class="text-slate-500 text-sm md:text-base max-w-2xl mx-auto" data-t="coreDesc">We combine traditional values with modern technology to ensure the highest quality.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8" id="infoCards">
+                    <!-- Cards injected here -->
+                </div>
+            </div>
+        </section>
+
+        <section id="gallery" class="py-24 bg-white">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-4" data-t="farmGallery">Farm Gallery</h2>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="galleryGrid">
+                    <!-- Images injected here -->
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="py-16 md:py-24 bg-slate-900 text-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16">
+                    <div>
+                        <h2 class="text-2xl md:text-4xl font-serif font-bold mb-8 md:mb-12" data-t="getInTouch">Get in Touch</h2>
+                        <div class="space-y-6 md:space-y-8">
+                            <div class="flex items-center gap-4 md:gap-6">
+                                <div class="p-3 md:p-4 bg-white/10 rounded-2xl shrink-0"><i data-lucide="map-pin" class="w-5 h-5 md:w-6 md:h-6 text-farm-accent"></i></div>
+                                <div><p class="text-white/60 text-[10px] md:text-xs uppercase tracking-widest" data-t="address">Address</p><p class="text-base md:text-lg">Jadurani Bajar, Haripur, Thakurgaon</p></div>
+                            </div>
+                            <div class="flex items-center gap-4 md:gap-6">
+                                <div class="p-3 md:p-4 bg-white/10 rounded-2xl shrink-0"><i data-lucide="phone" class="w-5 h-5 md:w-6 md:h-6 text-farm-accent"></i></div>
+                                <div><p class="text-white/60 text-[10px] md:text-xs uppercase tracking-widest" data-t="phone">Phone</p><p class="text-base md:text-lg">+8801727387706</p></div>
+                            </div>
+                            <div class="flex items-center gap-4 md:gap-6">
+                                <div class="p-3 md:p-4 bg-white/10 rounded-2xl shrink-0"><i data-lucide="mail" class="w-5 h-5 md:w-6 md:h-6 text-farm-accent"></i></div>
+                                <div><p class="text-white/60 text-[10px] md:text-xs uppercase tracking-widest" data-t="email">Email</p><p class="text-base md:text-lg">rafeenaheyan2@gmail.com</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 p-6 md:p-10 rounded-3xl border border-white/10">
+                        <h3 class="text-lg md:text-xl font-bold mb-6 md:mb-8" data-t="management">Management Team</h3>
+                        <div class="space-y-6 md:space-y-8">
+                            <div class="flex items-center gap-4 p-4 bg-white/5 rounded-2xl">
+                                <div class="w-12 h-12 md:w-16 md:h-16 bg-farm-accent rounded-full flex items-center justify-center text-lg md:text-xl font-bold shrink-0">R</div>
+                                <div><p class="font-bold text-base md:text-lg">RAFEE NAHEYAN</p><p class="text-white/60 text-xs md:text-sm">Manager | 01590018360</p><p class="text-white/60 text-[10px] md:text-xs">rafeenaheyan@gmail.com</p></div>
+                            </div>
+                            <div class="flex items-center gap-4 p-4 bg-white/5 rounded-2xl">
+                                <div class="w-12 h-12 md:w-16 md:h-16 bg-blue-500 rounded-full flex items-center justify-center text-lg md:text-xl font-bold shrink-0">S</div>
+                                <div><p class="font-bold text-base md:text-lg">MD SAGAR HOSSAIN</p><p class="text-white/60 text-xs md:text-sm">Co-Manager</p><p class="text-white/60 text-[10px] md:text-xs">sagarhossain0@gmail.com</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="bg-slate-950 py-12 border-t border-white/5">
+            <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-farm-green rounded-lg flex items-center justify-center text-white font-bold">E</div>
+                    <span class="text-xl font-serif font-bold text-white">Eco Dairy</span>
+                </div>
+                <div class="flex gap-8">
+                    <a href="#" class="text-white/40 hover:text-white transition-colors"><i data-lucide="facebook"></i></a>
+                    <a href="#" class="text-white/40 hover:text-white transition-colors"><i data-lucide="twitter"></i></a>
+                    <a href="#" class="text-white/40 hover:text-white transition-colors"><i data-lucide="instagram"></i></a>
+                </div>
+                <p class="text-white/40 text-sm">&copy; 2026 Eco Dairy Farm. Built with excellence.</p>
+            </div>
+        </footer>
+    </template>
+
+    <template id="auth-template">
+        <div class="min-h-screen bg-farm-light flex items-center justify-center p-6 relative overflow-hidden pt-24">
+            <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-farm-green/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-farm-accent/10 rounded-full blur-3xl"></div>
+            <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden relative z-10">
+                <div class="p-8 sm:p-12">
+                    <div class="flex justify-between items-center mb-8">
+                        <button onclick="showView('home')" class="flex items-center gap-2 text-slate-500 hover:text-farm-green transition-colors">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i> Back to Home
+                        </button>
+                        <button id="backToLoginBtn" onclick="showView('login')" class="hidden flex items-center gap-2 text-slate-500 hover:text-farm-green transition-colors">
+                            <i data-lucide="log-in" class="w-5 h-5"></i> Back to Login
+                        </button>
+                    </div>
+                    <div class="text-center mb-10">
+                        <h2 class="text-2xl md:text-3xl font-serif font-bold text-slate-900 mb-2" id="authTitle">Welcome Back</h2>
+                        <p class="text-slate-500 text-sm md:text-base" id="authSubtitle">Please enter your details to login</p>
+                    </div>
+                    <div id="roleSelector" class="hidden flex p-1 bg-slate-100 rounded-2xl mb-8">
+                        <button onclick="setAuthRole('CUSTOMER')" id="roleCustomer" class="flex-1 py-3 rounded-xl font-bold transition-all bg-white text-farm-green shadow-sm">CUSTOMER</button>
+                        <button onclick="setAuthRole('ENTREPRENEUR')" id="roleEntrepreneur" class="flex-1 py-3 rounded-xl font-bold transition-all text-slate-500">ENTREPRENEUR</button>
+                    </div>
+                    <form id="authForm" class="space-y-5">
+                        <div id="registerFields" class="hidden space-y-5">
+                            <div class="relative"><i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="fullName" placeholder="Full Name" class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div class="relative"><i data-lucide="phone" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="mobile" placeholder="Mobile" class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                                <div class="relative"><i data-lucide="message-square" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="whatsApp" placeholder="WhatsApp" class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                            </div>
+                            <div class="relative"><i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="email" type="email" placeholder="Email Address" class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                        </div>
+                        <div class="relative"><i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="username" placeholder="Username" required class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                        <div class="relative">
+                            <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
+                            <input name="password" id="authPasswordInput" type="password" placeholder="Password" required class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all">
+                        </div>
+                        <div id="passwordStrengthContainer" class="hidden space-y-2">
+                            <div class="flex gap-1 h-1.5 w-full">
+                                <div id="strengthBar1" class="flex-1 rounded-full bg-slate-200 transition-all"></div>
+                                <div id="strengthBar2" class="flex-1 rounded-full bg-slate-200 transition-all"></div>
+                                <div id="strengthBar3" class="flex-1 rounded-full bg-slate-200 transition-all"></div>
+                                <div id="strengthBar4" class="flex-1 rounded-full bg-slate-200 transition-all"></div>
+                            </div>
+                            <p id="strengthText" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Password Strength</p>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="button" onclick="openForgotPasswordModal()" class="text-xs font-bold text-farm-green hover:underline">Forgot Password?</button>
+                        </div>
+                        <button type="submit" class="w-full glossy-button py-4 text-lg font-bold mt-4 shadow-xl shadow-farm-green/20" id="authSubmitBtn">Sign In</button>
+                    </form>
+                    <div class="mt-10 text-center">
+                        <p class="text-slate-500" id="authSwitchText">Don't have an account? <button onclick="switchAuth()" class="ml-2 font-bold text-farm-green hover:underline" id="authSwitchBtn">Create one now</button></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="complete-profile-template">
+        <div class="min-h-screen bg-farm-light flex items-center justify-center p-6 pt-24">
+            <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div class="p-8 sm:p-12">
+                    <div class="text-center mb-10">
+                        <h2 class="text-3xl font-serif font-bold text-slate-900 mb-2">Complete Your Profile</h2>
+                        <p class="text-slate-500">Please provide the following details to access your dashboard</p>
+                    </div>
+                    <form id="completeProfileForm" class="space-y-6">
+                        <div class="flex flex-col items-center mb-8">
+                            <div class="w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center relative overflow-hidden group cursor-pointer" onclick="document.getElementById('profilePhotoInput').click()">
+                                <img id="profilePreview" src="" class="hidden w-full h-full object-cover">
+                                <i data-lucide="camera" class="w-8 h-8 text-slate-400 group-hover:text-farm-green transition-colors"></i>
+                                <input type="file" id="profilePhotoInput" accept="image/*" class="hidden" onchange="previewImage(this, 'profilePreview')">
+                            </div>
+                            <p class="text-xs text-slate-400 mt-2">Upload Profile Photo *</p>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="relative"><i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="fullName" placeholder="Full Name *" required class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                            <div class="relative"><i data-lucide="at-sign" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="username" placeholder="Username *" required class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                        </div>
+                        <div class="relative"><i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="password" type="password" placeholder="New Password *" required class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="relative"><i data-lucide="phone" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="mobile" placeholder="Mobile Number *" required class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                            <div class="relative"><i data-lucide="message-square" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i><input name="whatsApp" placeholder="WhatsApp Number *" required class="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-farm-green outline-none transition-all"></div>
+                        </div>
+                        <div id="entrepreneurFields" class="hidden space-y-6">
+                            <div class="p-6 bg-amber-50 rounded-2xl border border-amber-100">
+                                <p class="text-sm font-bold text-amber-800 mb-4 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i> Entrepreneur Verification Required</p>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-full h-32 rounded-2xl bg-white border-2 border-dashed border-slate-300 flex items-center justify-center relative overflow-hidden group cursor-pointer" onclick="document.getElementById('nidInput').click()">
+                                        <img id="nidPreview" src="" class="hidden w-full h-full object-contain">
+                                        <div class="text-center group-hover:text-farm-green transition-colors">
+                                            <i data-lucide="upload" class="w-8 h-8 mx-auto text-slate-400 mb-2"></i>
+                                            <p class="text-xs text-slate-400">Upload NID Photo *</p>
+                                        </div>
+                                        <input type="file" id="nidInput" accept="image/*" class="hidden" onchange="previewImage(this, 'nidPreview')">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full glossy-button py-4 text-lg font-bold mt-4 shadow-xl shadow-farm-green/20">Complete Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="dashboard-template">
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+        <div class="min-h-screen bg-slate-50 flex flex-col md:flex-row pt-20">
+            <!-- Admin Sidebar -->
+            <aside id="adminSidebar" class="hidden w-full md:w-72 bg-white border-r border-slate-200 flex-col sticky top-20 h-[calc(100vh-5rem)] z-40">
+                <div class="p-6 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-farm-green flex items-center justify-center text-white font-bold text-xl" id="dashUserInitial">A</div>
+                        <div>
+                            <p class="font-bold text-slate-900 text-sm" id="dashUserName">Admin Name</p>
+                            <p class="text-xs text-slate-500" id="dashUserRole">Administrator</p>
+                        </div>
+                    </div>
+                </div>
+                <nav class="flex-1 overflow-y-auto p-4 space-y-1 relative" id="adminNavContainer">
+                    <div id="adminNav" class="space-y-1">
+                        <!-- Nav items injected here -->
+                    </div>
+                    <!-- Settings Sub-menu Panel -->
+                    <div id="settingsPanel" class="settings-panel p-4">
+                        <div class="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                            <button onclick="closeSettingsPanel()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                            </button>
+                            <h3 class="font-bold text-slate-800">Settings</h3>
+                        </div>
+                        <div id="settingsSubNav" class="space-y-1">
+                            <!-- Settings edit items injected here -->
+                        </div>
+                    </div>
+                </nav>
+                <div class="p-4 border-t border-slate-100">
+                    <button onclick="logout()" class="flex items-center gap-3 w-full p-3 rounded-xl text-red-500 hover:bg-red-50 transition-all font-bold text-sm">
+                        <i data-lucide="log-out" class="w-5 h-5"></i> Logout
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Mobile Admin Nav Toggle -->
+            <div id="mobileAdminNav" class="md:hidden bg-white border-b border-slate-200 p-4 sticky top-20 z-40 flex justify-between items-center">
+                <span class="font-bold text-slate-800" id="mobileCurrentSection">Dashboard</span>
+                <button onclick="toggleMobileMenu()" class="p-2 bg-slate-100 rounded-lg">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 flex flex-col">
+                <header class="bg-white border-b border-slate-200 px-6 py-4 hidden md:flex justify-between items-center sticky top-20 z-30">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-lg md:text-xl font-bold text-slate-800" id="dashTitle">Dashboard</h1>
+                    </div>
+                    <div id="dashHeaderActions" class="flex items-center gap-4">
+                        <button onclick="setAdminSection('notifications')" class="p-2 bg-slate-100 rounded-xl text-slate-500 hover:text-farm-green transition-all relative">
+                            <i data-lucide="bell" class="w-5 h-5"></i>
+                            <div id="notifBadge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold">0</div>
+                        </button>
+                        <!-- Actions like "Add User" injected here -->
+                    </div>
+                </header>
+                <main class="p-4 md:p-8 flex-1">
+                    <div id="dashStats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+                        <!-- Stats injected here -->
+                    </div>
+                    <div id="dashCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 class="text-lg font-bold mb-6">Performance Overview</h3>
+                            <canvas id="performanceChart" height="200"></canvas>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 class="text-lg font-bold mb-6">Growth Trends</h3>
+                            <canvas id="growthChart" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div id="dashContent" class="space-y-6">
+                        <!-- Specific section content injected here -->
+                    </div>
+                </main>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+</body>
+</html>
