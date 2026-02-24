@@ -11,6 +11,11 @@ export interface User {
   role: UserRole;
   nidFront?: string;
   nidBack?: string;
+  address?: string;
+  whatToBuy?: string;
+  milkQuantity?: number;
+  previousBalance?: number;
+  advanceDeposit?: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
 }

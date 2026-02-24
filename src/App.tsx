@@ -17,7 +17,9 @@ export default function App() {
     addProduct, 
     approveProduct, 
     approveUser, 
-    placeOrder 
+    placeOrder,
+    addCustomer,
+    recordSale
   } = useAppState();
 
   const [currentView, setCurrentView] = useState<View>('LANDING');
@@ -112,6 +114,12 @@ export default function App() {
           onPlaceOrder={(p) => {
             placeOrder(p);
             showPopup('success', 'Order placed successfully!');
+          }}
+          onAddCustomer={(c) => {
+            addCustomer(c);
+          }}
+          onRecordSale={(s) => {
+            recordSale(s);
           }}
         />
       )}

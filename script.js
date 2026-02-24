@@ -1,15 +1,80 @@
+// Safe LocalStorage Wrapper
+const safeLocalStorage = {
+    setItem: (key, value) => {
+        try {
+            // If we're saving the current user, just save the ID to save space
+            if (key === 'eco_current_user' && value) {
+                try {
+                    const user = JSON.parse(value);
+                    if (user && user.id) {
+                        localStorage.setItem('eco_current_user_id', user.id);
+                        return; // Don't save the full object
+                    }
+                } catch (e) {
+                    // Not JSON or other error, fallback to normal setItem
+                }
+            }
+            localStorage.setItem(key, value);
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                console.warn('LocalStorage quota exceeded. Attempting to clear non-essential data...');
+                localStorage.removeItem('eco_gallery');
+                localStorage.removeItem('eco_notifications');
+                
+                try {
+                    localStorage.setItem(key, value);
+                } catch (retryError) {
+                    console.error('LocalStorage still full after clearing non-essential data. Attempting to strip large assets...');
+                    // If we're saving users, try to strip photos to save the core data
+                    if (key === 'eco_users') {
+                        try {
+                            const users = JSON.parse(value);
+                            const slimUsers = users.map(u => ({...u, photo: null, nidPhoto: null}));
+                            localStorage.setItem(key, JSON.stringify(slimUsers));
+                            console.warn('Saved users without photos to stay within quota.');
+                            return;
+                        } catch (stripError) {
+                            console.error('Failed to strip users:', stripError);
+                        }
+                    }
+                    console.error('Failed to save to LocalStorage even after stripping data.', retryError);
+                }
+            } else {
+                console.error('LocalStorage error:', e);
+            }
+        }
+    },
+    getItem: (key) => {
+        if (key === 'eco_current_user') {
+            const id = localStorage.getItem('eco_current_user_id');
+            if (id && state && state.users) {
+                return JSON.stringify(state.users.find(u => u.id === id) || null);
+            }
+            // Fallback to old key if exists
+            return localStorage.getItem('eco_current_user');
+        }
+        return localStorage.getItem(key);
+    },
+    removeItem: (key) => {
+        if (key === 'eco_current_user') {
+            localStorage.removeItem('eco_current_user_id');
+        }
+        localStorage.removeItem(key);
+    }
+};
+
 // State Management
 let state = {
     lang: 'EN',
     currentView: 'home',
-    currentUser: JSON.parse(localStorage.getItem('eco_current_user')) || null,
+    currentUser: null, // Will be linked after users are loaded
     adminSection: 'dashboard',
     authType: 'login',
     authRole: 'CUSTOMER',
-    users: JSON.parse(localStorage.getItem('eco_users')) || [
+    users: JSON.parse(safeLocalStorage.getItem('eco_users')) || [
         { id: 'admin-1', fullName: 'RAFEE NAHEYAN', username: '1234', password: '1234', role: 'ADMIN', status: 'ACTIVE' }
     ],
-    content: JSON.parse(localStorage.getItem('eco_content')) || {
+    content: JSON.parse(safeLocalStorage.getItem('eco_content')) || {
         EN: {
             subtitle: 'Organic & Fresh Dairy Products',
             heroTitle: 'Eco Dairy Farm',
@@ -39,11 +104,28 @@ let state = {
             footerText: '© ২০২৬ ইকো ডেইরি ফার্ম। শ্রেষ্ঠত্বের সাথে নির্মিত।'
         }
     },
-    gallery: JSON.parse(localStorage.getItem('eco_gallery')) || [1, 2, 3, 4, 5, 6, 7, 8].map(i => `https://picsum.photos/seed/farm${i}/500/500`),
-    orders: JSON.parse(localStorage.getItem('eco_orders')) || [],
-    transactions: JSON.parse(localStorage.getItem('eco_transactions')) || [],
-    notifications: JSON.parse(localStorage.getItem('eco_notifications')) || []
+    gallery: JSON.parse(safeLocalStorage.getItem('eco_gallery')) || [1, 2, 3, 4, 5, 6, 7, 8].map(i => `https://picsum.photos/seed/farm${i}/500/500`),
+    orders: JSON.parse(safeLocalStorage.getItem('eco_orders')) || [],
+    transactions: JSON.parse(safeLocalStorage.getItem('eco_transactions')) || [],
+    notifications: JSON.parse(safeLocalStorage.getItem('eco_notifications')) || []
 };
+
+// Link current user after state initialization
+const savedUserId = localStorage.getItem('eco_current_user_id');
+if (savedUserId) {
+    state.currentUser = state.users.find(u => u.id === savedUserId) || null;
+} else {
+    // Fallback for old storage format
+    const oldUser = safeLocalStorage.getItem('eco_current_user');
+    if (oldUser) {
+        try {
+            const parsed = JSON.parse(oldUser);
+            if (parsed && parsed.id) {
+                state.currentUser = state.users.find(u => u.id === parsed.id) || parsed;
+            }
+        } catch(e) {}
+    }
+}
 
 // Translations
 const t = {
@@ -105,7 +187,7 @@ function setupEventListeners() {
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => {
         state.currentUser = null;
-        localStorage.removeItem('eco_current_user');
+        safeLocalStorage.removeItem('eco_current_user');
         showView('home');
         showAlert('success', 'Logged out successfully');
     });
@@ -136,6 +218,7 @@ function showView(view) {
 
 function renderView() {
     const app = document.getElementById('app');
+    if (!app) return;
     app.innerHTML = '';
     
     // Update Sidebar Auth Buttons
@@ -146,17 +229,17 @@ function renderView() {
     const adminLoginBtn = document.getElementById('adminLoginBtn');
 
     if (state.currentUser) {
-        authButtons.classList.add('hidden');
-        logoutBtn.classList.remove('hidden');
-        dashLink.classList.remove('hidden');
-        loginCreateBtn.classList.add('hidden');
-        adminLoginBtn.classList.add('hidden');
+        if (authButtons) authButtons.classList.add('hidden');
+        if (logoutBtn) logoutBtn.classList.remove('hidden');
+        if (dashLink) dashLink.classList.remove('hidden');
+        if (loginCreateBtn) loginCreateBtn.classList.add('hidden');
+        if (adminLoginBtn) adminLoginBtn.classList.add('hidden');
     } else {
-        authButtons.classList.remove('hidden');
-        logoutBtn.classList.add('hidden');
-        dashLink.classList.add('hidden');
-        loginCreateBtn.classList.remove('hidden');
-        adminLoginBtn.classList.remove('hidden');
+        if (authButtons) authButtons.classList.remove('hidden');
+        if (logoutBtn) logoutBtn.classList.add('hidden');
+        if (dashLink) dashLink.classList.add('hidden');
+        if (loginCreateBtn) loginCreateBtn.classList.remove('hidden');
+        if (adminLoginBtn) adminLoginBtn.classList.remove('hidden');
     }
 
     if (state.currentView === 'home') {
@@ -288,38 +371,46 @@ function renderAuthView() {
     const passwordInput = document.getElementById('authPasswordInput');
 
     if (state.currentView === 'adminLogin') {
-        title.textContent = 'Admin Login';
-        subtitle.textContent = 'Restricted access for administrators only';
-        submitBtn.textContent = 'Login as Admin';
-        switchText.classList.add('hidden');
-        roleSelector.classList.add('hidden');
-        registerFields.classList.add('hidden');
+        if (title) title.textContent = 'Admin Login';
+        if (subtitle) subtitle.textContent = 'Restricted access for administrators only';
+        if (submitBtn) submitBtn.textContent = 'Login as Admin';
+        if (switchText) {
+            switchText.classList.add('hidden');
+        }
+        if (roleSelector) roleSelector.classList.add('hidden');
+        if (registerFields) registerFields.classList.add('hidden');
         if (backToLoginBtn) backToLoginBtn.classList.add('hidden');
         if (passwordStrengthContainer) passwordStrengthContainer.classList.add('hidden');
     } else if (state.currentView === 'login') {
-        title.textContent = 'Welcome Back';
-        subtitle.textContent = 'Please enter your details to login';
-        submitBtn.textContent = 'Sign In';
-        switchText.classList.remove('hidden');
-        roleSelector.classList.add('hidden');
-        registerFields.classList.add('hidden');
+        if (title) title.textContent = 'Welcome Back';
+        if (subtitle) subtitle.textContent = 'Please enter your details to login';
+        if (submitBtn) submitBtn.textContent = 'Sign In';
+        if (switchText) {
+            switchText.classList.remove('hidden');
+            switchText.innerHTML = `Don't have an account? <button onclick="switchAuth()" class="ml-2 font-bold text-farm-green hover:underline" id="authSwitchBtn">Create one now</button>`;
+        }
+        if (roleSelector) roleSelector.classList.add('hidden');
+        if (registerFields) registerFields.classList.add('hidden');
         if (backToLoginBtn) backToLoginBtn.classList.add('hidden');
         if (passwordStrengthContainer) passwordStrengthContainer.classList.add('hidden');
     } else {
-        title.textContent = 'Create Account';
-        subtitle.textContent = 'Join our eco-friendly dairy community';
-        submitBtn.textContent = 'Create Account';
-        switchText.classList.remove('hidden');
-        roleSelector.classList.remove('hidden');
+        if (title) title.textContent = 'Create Account';
+        if (subtitle) subtitle.textContent = 'Join our eco-friendly dairy community';
+        if (submitBtn) submitBtn.textContent = 'Create Account';
+        if (switchText) {
+            switchText.classList.remove('hidden');
+            switchText.innerHTML = `Already have an account? <button onclick="switchAuth()" class="ml-2 font-bold text-farm-green hover:underline" id="authSwitchBtn">Login here</button>`;
+        }
+        if (roleSelector) roleSelector.classList.remove('hidden');
         if (backToLoginBtn) backToLoginBtn.classList.remove('hidden');
         
         if (state.authRole === 'ENTREPRENEUR') {
-            registerFields.classList.add('hidden');
-            submitBtn.textContent = 'Contact Manager to Join';
-            subtitle.textContent = 'Entrepreneurs must contact a manager for account creation';
+            if (registerFields) registerFields.classList.add('hidden');
+            if (submitBtn) submitBtn.textContent = 'Contact Manager to Join';
+            if (subtitle) subtitle.textContent = 'Entrepreneurs must contact a manager for account creation';
             if (passwordStrengthContainer) passwordStrengthContainer.classList.add('hidden');
         } else {
-            registerFields.classList.remove('hidden');
+            if (registerFields) registerFields.classList.remove('hidden');
             if (passwordStrengthContainer) passwordStrengthContainer.classList.remove('hidden');
         }
     }
@@ -340,8 +431,8 @@ function renderAuthView() {
         if (state.currentView === 'adminLogin') {
             if (data.username === '1234' && data.password === '1234') {
                 state.currentUser = state.users.find(u => u.username === '1234');
-                localStorage.setItem('eco_current_user', JSON.stringify(state.currentUser));
-                localStorage.setItem('role', 'admin');
+                safeLocalStorage.setItem('eco_current_user', JSON.stringify(state.currentUser));
+                safeLocalStorage.setItem('role', 'admin');
                 showView('dashboard');
                 showAlert('success', 'Admin login successful');
             } else {
@@ -355,8 +446,8 @@ function renderAuthView() {
                     return;
                 }
                 state.currentUser = user;
-                localStorage.setItem('eco_current_user', JSON.stringify(user));
-                localStorage.setItem('role', user.role.toLowerCase());
+                safeLocalStorage.setItem('eco_current_user', JSON.stringify(user));
+                safeLocalStorage.setItem('role', user.role.toLowerCase());
                 
                 if (user.status === 'INCOMPLETE_PROFILE') {
                     showView('completeProfile');
@@ -386,7 +477,7 @@ function renderAuthView() {
                 createdAt: new Date().toISOString()
             };
             state.users.push(newUser);
-            localStorage.setItem('eco_users', JSON.stringify(state.users));
+            safeLocalStorage.setItem('eco_users', JSON.stringify(state.users));
             showAlert('success', 'Account created! You can now login.');
             showView('login');
         }
@@ -453,20 +544,22 @@ function renderDashboard() {
     const dashCharts = document.getElementById('dashCharts');
 
     // Reset view
-    dashContent.innerHTML = '';
-    dashStats.innerHTML = '';
-    dashCharts.classList.add('hidden');
+    if (dashContent) dashContent.innerHTML = '';
+    if (dashStats) dashStats.innerHTML = '';
+    if (dashCharts) dashCharts.classList.add('hidden');
 
     if (user.role === 'ADMIN') {
-        adminSidebar.classList.remove('hidden');
-        adminSidebar.classList.add('flex');
-        mobileAdminNav.classList.remove('hidden');
+        if (adminSidebar) {
+            adminSidebar.classList.remove('hidden');
+            adminSidebar.classList.add('flex');
+        }
+        if (mobileAdminNav) mobileAdminNav.classList.remove('hidden');
         renderAdminNav();
         renderAdminSection(state.adminSection);
         updateNotifBadge();
     } else {
-        adminSidebar.classList.add('hidden');
-        mobileAdminNav.classList.add('hidden');
+        if (adminSidebar) adminSidebar.classList.add('hidden');
+        if (mobileAdminNav) mobileAdminNav.classList.add('hidden');
         renderUserDashboard();
     }
 }
@@ -480,6 +573,7 @@ function toggleMobileMenu() {
 
 function renderAdminNav() {
     const nav = document.getElementById('adminNav');
+    if (!nav) return;
     const sections = [
         { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
         { id: 'landing', label: 'Landing Page', icon: 'home' },
@@ -561,8 +655,8 @@ function renderAdminSection(section) {
     const dashCharts = document.getElementById('dashCharts');
     const headerActions = document.getElementById('dashHeaderActions');
     
-    dashTitle.textContent = section.charAt(0).toUpperCase() + section.slice(1);
-    headerActions.innerHTML = '';
+    if (dashTitle) dashTitle.textContent = section.charAt(0).toUpperCase() + section.slice(1);
+    if (headerActions) headerActions.innerHTML = '';
 
     // Add back button for non-dashboard sections
     let backHeader = '';
@@ -577,13 +671,13 @@ function renderAdminSection(section) {
     }
 
     if (section === 'dashboard') {
-        dashCharts.classList.remove('hidden');
+        if (dashCharts) dashCharts.classList.remove('hidden');
         renderAdminStats();
         renderAdminDashboardHome();
     } else {
-        dashCharts.classList.add('hidden');
-        dashStats.innerHTML = '';
-        dashContent.innerHTML = backHeader;
+        if (dashCharts) dashCharts.classList.add('hidden');
+        if (dashStats) dashStats.innerHTML = '';
+        if (dashContent) dashContent.innerHTML = backHeader;
         
         if (section === 'users') {
             renderUserManagement(true);
@@ -616,6 +710,7 @@ function renderAdminSection(section) {
 
 function renderAdminStats() {
     const statsContainer = document.getElementById('dashStats');
+    if (!statsContainer) return;
     const stats = [
         { label: 'Total Users', value: state.users.length, icon: 'users', color: 'bg-blue-500' },
         { label: 'Total Orders', value: state.orders.length, icon: 'shopping-cart', color: 'bg-emerald-500' },
@@ -637,6 +732,7 @@ function renderAdminStats() {
 
 function renderAdminDashboardHome() {
     const dashContent = document.getElementById('dashContent');
+    if (!dashContent) return;
     const recentNotifications = state.notifications.slice(0, 5);
     
     dashContent.innerHTML = `
@@ -735,6 +831,7 @@ function renderUserDashboard() {
 
 function renderEntrepreneurManagement(readOnly = false) {
     const dashContent = document.getElementById('dashContent');
+    if (!dashContent) return;
     const entrepreneurs = state.users.filter(u => u.role === 'ENTREPRENEUR');
     
     let backBtn = '';
@@ -830,8 +927,8 @@ function renderCompleteProfileView() {
             };
             
             state.currentUser = state.users[userIdx];
-            localStorage.setItem('eco_users', JSON.stringify(state.users));
-            localStorage.setItem('eco_current_user', JSON.stringify(state.currentUser));
+            safeLocalStorage.setItem('eco_users', JSON.stringify(state.users));
+            safeLocalStorage.setItem('eco_current_user', JSON.stringify(state.currentUser));
             
             if (state.currentUser.role === 'ENTREPRENEUR') {
                 addNotification('entrepreneur', `New entrepreneur profile submitted: ${state.currentUser.fullName}`);
@@ -911,7 +1008,7 @@ function markNotificationRead(id) {
     const notif = state.notifications.find(n => n.id === id);
     if (notif) {
         notif.read = true;
-        localStorage.setItem('eco_notifications', JSON.stringify(state.notifications));
+        safeLocalStorage.setItem('eco_notifications', JSON.stringify(state.notifications));
         updateNotifBadge();
         if (state.adminSection === 'notifications') renderNotifications();
         if (state.adminSection === 'dashboard') renderAdminDashboardHome();
@@ -920,7 +1017,7 @@ function markNotificationRead(id) {
 
 function markAllNotificationsRead() {
     state.notifications.forEach(n => n.read = true);
-    localStorage.setItem('eco_notifications', JSON.stringify(state.notifications));
+    safeLocalStorage.setItem('eco_notifications', JSON.stringify(state.notifications));
     updateNotifBadge();
     if (state.adminSection === 'notifications') renderNotifications();
     showAlert('success', 'All notifications marked as read');
@@ -941,6 +1038,7 @@ function updateNotifBadge() {
 function renderUserManagement(readOnly = false) {
     const dashContent = document.getElementById('dashContent');
     const headerActions = document.getElementById('dashHeaderActions');
+    if (!dashContent) return;
     
     let backBtn = '';
     if (!readOnly) {
@@ -1077,7 +1175,7 @@ function openCreateUserModal() {
         };
         
         state.users.push(newUser);
-        localStorage.setItem('eco_users', JSON.stringify(state.users));
+        safeLocalStorage.setItem('eco_users', JSON.stringify(state.users));
         closeAlert();
         showAlert('success', 'User created successfully!');
         renderUserManagement();
@@ -1335,7 +1433,7 @@ function saveLandingContent(lang) {
     state.content[lang].subtitle = document.getElementById(`land_${lang}_subtitle`).value;
     state.content[lang].heroDesc = document.getElementById(`land_${lang}_heroDesc`).value;
     
-    localStorage.setItem('eco_content', JSON.stringify(state.content));
+    safeLocalStorage.setItem('eco_content', JSON.stringify(state.content));
     showAlert('success', `${lang} content updated successfully!`);
 }
 
@@ -1371,7 +1469,7 @@ function renderGalleryEditor() {
 
 function removeGalleryImage(idx) {
     state.gallery.splice(idx, 1);
-    localStorage.setItem('eco_gallery', JSON.stringify(state.gallery));
+    safeLocalStorage.setItem('eco_gallery', JSON.stringify(state.gallery));
     renderGalleryEditor();
     showAlert('success', 'Image removed from gallery');
 }
@@ -1605,7 +1703,7 @@ function addNotification(type, message) {
         read: false
     };
     state.notifications.unshift(notification);
-    localStorage.setItem('eco_notifications', JSON.stringify(state.notifications));
+    safeLocalStorage.setItem('eco_notifications', JSON.stringify(state.notifications));
     
     // Non-intrusive toast if admin is logged in
     if (state.currentUser && state.currentUser.role === 'ADMIN') {
@@ -1676,7 +1774,7 @@ function saveGalleryImage() {
 
 function logout() {
     state.currentUser = null;
-    localStorage.removeItem('eco_current_user');
+    safeLocalStorage.removeItem('eco_current_user');
     showView('home');
     showAlert('success', 'Logged out successfully');
 }

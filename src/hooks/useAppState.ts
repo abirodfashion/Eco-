@@ -31,7 +31,35 @@ export function useAppState() {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      if (e instanceof Error && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+        console.warn('LocalStorage quota exceeded in useAppState. Attempting to slim state...');
+        
+        // Try clearing other non-essential keys first
+        localStorage.removeItem('eco_gallery');
+        localStorage.removeItem('eco_notifications');
+        
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (retryError) {
+          console.error('LocalStorage still full. Stripping photos from state...');
+          // Last resort: strip photos from users in the state being saved
+          const slimState = {
+            ...state,
+            users: state.users.map(u => ({ ...u, nidFront: undefined, nidBack: undefined })),
+            products: state.products.map(p => ({ ...p, image: '' }))
+          };
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(slimState));
+            console.warn('Saved slimmed state (no photos) to stay within quota.');
+          } catch (finalError) {
+            console.error('Failed to save even slimmed state.', finalError);
+          }
+        }
+      }
+    }
   }, [state]);
 
   const login = (username: string, password: string): User | null => {
@@ -112,6 +140,55 @@ export function useAppState() {
     setState(prev => ({ ...prev, orders: [...prev.orders, newOrder] }));
   };
 
+  const addCustomer = (customerData: Partial<User>) => {
+    const newCustomer: User = {
+      id: Math.random().toString(36).substr(2, 9),
+      fullName: customerData.fullName || '',
+      mobile: customerData.mobile || '',
+      whatsApp: customerData.whatsApp || '',
+      email: customerData.email || '',
+      username: customerData.username || '',
+      password: customerData.password || '',
+      role: 'CUSTOMER',
+      address: customerData.address,
+      whatToBuy: customerData.whatToBuy,
+      milkQuantity: customerData.milkQuantity,
+      previousBalance: customerData.previousBalance,
+      advanceDeposit: customerData.advanceDeposit,
+      status: 'APPROVED',
+      createdAt: new Date().toISOString(),
+    };
+
+    setState(prev => ({
+      ...prev,
+      users: [...prev.users, newCustomer]
+    }));
+    return newCustomer;
+  };
+
+  const recordSale = (saleData: any) => {
+    const newOrder: Order = {
+      id: Math.random().toString(36).substr(2, 9),
+      customerId: saleData.customerId,
+      productId: 'sale-manual',
+      productName: saleData.productName || 'Manual Sale',
+      price: saleData.totalPrice,
+      status: 'COMPLETED',
+      createdAt: saleData.date || new Date().toISOString(),
+    };
+
+    // Also update customer balance if needed
+    setState(prev => ({
+      ...prev,
+      orders: [...prev.orders, newOrder],
+      users: prev.users.map(u => 
+        u.id === saleData.customerId 
+          ? { ...u, previousBalance: (u.previousBalance || 0) + saleData.finalBalance - (u.previousBalance || 0) } 
+          : u
+      )
+    }));
+  };
+
   return {
     state,
     login,
@@ -120,6 +197,8 @@ export function useAppState() {
     addProduct,
     approveProduct,
     approveUser,
-    placeOrder
+    placeOrder,
+    addCustomer,
+    recordSale
   };
 }

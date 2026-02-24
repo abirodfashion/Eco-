@@ -46,6 +46,8 @@ interface DashboardProps {
   onApproveProduct?: (id: string) => void;
   onAddProduct?: (p: any) => void;
   onPlaceOrder?: (p: any) => void;
+  onAddCustomer?: (c: any) => void;
+  onRecordSale?: (s: any) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
@@ -55,14 +57,120 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onApproveUser, 
   onApproveProduct,
   onAddProduct,
-  onPlaceOrder
+  onPlaceOrder,
+  onAddCustomer,
+  onRecordSale
 }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [activeSection, setActiveSection] = React.useState('dashboard');
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = React.useState(false);
+  const [isSellModalOpen, setIsSellModalOpen] = React.useState(false);
+  
+  const [addCustomerData, setAddCustomerData] = React.useState({
+    username: '',
+    password: '',
+    address: '',
+    whatToBuy: 'Milk',
+    customProduct: '',
+    milkQuantity: 0,
+    previousBalance: 0,
+    advanceDeposit: 0,
+    adminPasswordConfirm: ''
+  });
+
+  const [sellData, setSellData] = React.useState({
+    customerId: '',
+    date: new Date().toISOString().split('T')[0],
+    quantity: 0,
+    price: 80,
+    collected: 0,
+    passwordConfirm: ''
+  });
 
   const isAdmin = user.role === 'ADMIN';
   const isEntrepreneur = user.role === 'ENTREPRENEUR';
   const isCustomer = user.role === 'CUSTOMER';
+
+  const handleAddCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check admin password confirmation
+    // For simplicity, we check against the admin user's password in state
+    const adminUser = state.users.find(u => u.role === 'ADMIN');
+    if (addCustomerData.adminPasswordConfirm !== adminUser?.password) {
+      alert('Invalid Admin Password Confirmation!');
+      return;
+    }
+
+    onAddCustomer?.({
+      fullName: addCustomerData.username, // Using username as full name for now
+      username: addCustomerData.username,
+      password: addCustomerData.password,
+      address: addCustomerData.address,
+      whatToBuy: addCustomerData.whatToBuy === 'Others' ? addCustomerData.customProduct : addCustomerData.whatToBuy,
+      milkQuantity: addCustomerData.whatToBuy === 'Milk' ? addCustomerData.milkQuantity : undefined,
+      previousBalance: addCustomerData.previousBalance,
+      advanceDeposit: addCustomerData.advanceDeposit,
+      role: 'CUSTOMER',
+      status: 'APPROVED'
+    });
+
+    setIsAddCustomerModalOpen(false);
+    setAddCustomerData({
+      username: '',
+      password: '',
+      address: '',
+      whatToBuy: 'Milk',
+      customProduct: '',
+      milkQuantity: 0,
+      previousBalance: 0,
+      advanceDeposit: 0,
+      adminPasswordConfirm: ''
+    });
+    alert('Customer added successfully!');
+  };
+
+  const selectedCustomerForSale = state.users.find(u => u.id === sellData.customerId);
+  const todayTotal = sellData.quantity * sellData.price;
+  const previousBalance = selectedCustomerForSale?.previousBalance || 0;
+  const finalBalance = todayTotal + previousBalance - sellData.collected;
+
+  const handleRecordSale = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!sellData.customerId) {
+      alert('Please select a customer');
+      return;
+    }
+
+    // Verify password (entrepreneur or admin)
+    if (sellData.passwordConfirm !== user.password) {
+      alert('Invalid Password Confirmation!');
+      return;
+    }
+
+    onRecordSale?.({
+      customerId: sellData.customerId,
+      date: sellData.date,
+      quantity: sellData.quantity,
+      price: sellData.price,
+      collected: sellData.collected,
+      totalPrice: todayTotal,
+      finalBalance: finalBalance,
+      productName: 'Milk Sale' // Defaulting to milk for this UI
+    });
+
+    setIsSellModalOpen(false);
+    setSellData({
+      customerId: '',
+      date: new Date().toISOString().split('T')[0],
+      quantity: 0,
+      price: 80,
+      collected: 0,
+      passwordConfirm: ''
+    });
+    alert('Sale recorded successfully!');
+  };
 
   const stats = React.useMemo(() => {
     if (isAdmin) {
@@ -220,6 +328,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            {(isAdmin || isEntrepreneur) && (
+              <div className="hidden md:flex items-center gap-2">
+                <button 
+                  onClick={() => setIsSellModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-all shadow-sm"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  Sell
+                </button>
+                <button 
+                  onClick={() => setIsAddCustomerModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-farm-green text-white rounded-xl font-bold hover:bg-farm-green/90 transition-all shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Customer
+                </button>
+              </div>
+            )}
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-900">{user.fullName}</p>
               <p className="text-xs text-slate-500">{user.role}</p>
@@ -494,6 +620,289 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </footer>
         )}
       </div>
+      {/* Add Customer Modal */}
+      <AnimatePresence>
+        {isAddCustomerModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddCustomerModalOpen(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl relative z-10 overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-serif font-bold text-slate-900">Add New Customer</h3>
+                  <button onClick={() => setIsAddCustomerModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                    <X className="w-6 h-6 text-slate-400" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddCustomer} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Username</label>
+                      <input 
+                        required 
+                        value={addCustomerData.username}
+                        onChange={e => setAddCustomerData(prev => ({ ...prev, username: e.target.value }))}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Password</label>
+                      <input 
+                        type="password"
+                        required 
+                        value={addCustomerData.password}
+                        onChange={e => setAddCustomerData(prev => ({ ...prev, password: e.target.value }))}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Address</label>
+                    <textarea 
+                      required 
+                      value={addCustomerData.address}
+                      onChange={e => setAddCustomerData(prev => ({ ...prev, address: e.target.value }))}
+                      rows={2}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">What to buy</label>
+                    <select 
+                      value={addCustomerData.whatToBuy}
+                      onChange={e => setAddCustomerData(prev => ({ ...prev, whatToBuy: e.target.value }))}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none"
+                    >
+                      <option value="Milk">Milk (দুধ)</option>
+                      <option value="Sweets">Sweets (মিষ্টি)</option>
+                      <option value="Cow">Cow (গরু)</option>
+                      <option value="Goat">Goat (ছাগল)</option>
+                      <option value="Others">Others (অন্যান্য)</option>
+                    </select>
+                  </div>
+
+                  {addCustomerData.whatToBuy === 'Others' && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Custom Product Name</label>
+                      <input 
+                        required 
+                        value={addCustomerData.customProduct}
+                        onChange={e => setAddCustomerData(prev => ({ ...prev, customProduct: e.target.value }))}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none" 
+                      />
+                    </motion.div>
+                  )}
+
+                  {addCustomerData.whatToBuy === 'Milk' && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Milk Quantity (kg)</label>
+                      <input 
+                        type="number"
+                        required 
+                        value={addCustomerData.milkQuantity}
+                        onChange={e => setAddCustomerData(prev => ({ ...prev, milkQuantity: Number(e.target.value) }))}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none" 
+                      />
+                    </motion.div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Previous Balance (আগের বাকি)</label>
+                      <input 
+                        type="number"
+                        value={addCustomerData.previousBalance}
+                        onChange={e => setAddCustomerData(prev => ({ ...prev, previousBalance: Number(e.target.value) }))}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Advance Deposit (অগ্রিম জামানত)</label>
+                      <input 
+                        type="number"
+                        value={addCustomerData.advanceDeposit}
+                        onChange={e => setAddCustomerData(prev => ({ ...prev, advanceDeposit: Number(e.target.value) }))}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-farm-green outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100">
+                    <label className="block text-sm font-bold text-red-600 mb-1">Admin Password Confirmation</label>
+                    <input 
+                      type="password"
+                      required 
+                      placeholder="Enter Admin Password"
+                      value={addCustomerData.adminPasswordConfirm}
+                      onChange={e => setAddCustomerData(prev => ({ ...prev, adminPasswordConfirm: e.target.value }))}
+                      className="w-full px-4 py-2 rounded-xl border border-red-200 focus:ring-2 focus:ring-red-500 outline-none" 
+                    />
+                  </div>
+
+                  <button type="submit" className="w-full glossy-button py-4 text-lg font-bold mt-4">
+                    Confirm Add Customer
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Sell Modal */}
+      <AnimatePresence>
+        {isSellModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSellModalOpen(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                    <CreditCard className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900">নতুন সেল এন্ট্রি</h3>
+                    <p className="text-slate-400 text-sm font-medium uppercase tracking-wider">
+                      {selectedCustomerForSale ? selectedCustomerForSale.fullName : 'CUSTOMER USER'} - এর জন্য সেল এন্ট্রি
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleRecordSale} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-2">কাস্টমার সিলেক্ট করুন</label>
+                    <select 
+                      required
+                      value={sellData.customerId}
+                      onChange={e => setSellData(prev => ({ ...prev, customerId: e.target.value }))}
+                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="">কাস্টমার লিস্ট</option>
+                      {state.users.filter(u => u.role === 'CUSTOMER').map(u => (
+                        <option key={u.id} value={u.id}>{u.fullName} ({u.mobile})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-500 mb-2">তারিখ</label>
+                      <input 
+                        type="date"
+                        required 
+                        value={sellData.date}
+                        onChange={e => setSellData(prev => ({ ...prev, date: e.target.value }))}
+                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-500 mb-2">পরিমাণ (কেজি)</label>
+                      <input 
+                        type="number"
+                        required 
+                        value={sellData.quantity}
+                        onChange={e => setSellData(prev => ({ ...prev, quantity: Number(e.target.value) }))}
+                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-500 mb-2">দাম (৳)</label>
+                      <input 
+                        type="number"
+                        required 
+                        value={sellData.price}
+                        onChange={e => setSellData(prev => ({ ...prev, price: Number(e.target.value) }))}
+                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-500 mb-2">আদায় (৳)</label>
+                      <input 
+                        type="number"
+                        required 
+                        value={sellData.collected}
+                        onChange={e => setSellData(prev => ({ ...prev, collected: Number(e.target.value) }))}
+                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50/50 rounded-[2rem] p-8 space-y-4 border border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 font-bold">আজকের মোট:</span>
+                      <span className="text-xl font-bold text-slate-700">৳ {todayTotal}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 font-bold">আগের জমা:</span>
+                      <span className="text-xl font-bold text-slate-700">৳ {previousBalance}</span>
+                    </div>
+                    <div className="h-px bg-slate-200 w-full my-2" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-indigo-600 font-bold text-lg">চূড়ান্ত বাকি:</span>
+                      <span className="text-2xl font-bold text-red-500">৳ {finalBalance}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <label className="block text-sm font-bold text-slate-500 mb-2">পাসওয়ার্ড কনফার্ম করুন</label>
+                    <input 
+                      type="password"
+                      required 
+                      placeholder="আপনার পাসওয়ার্ড দিন"
+                      value={sellData.passwordConfirm}
+                      onChange={e => setSellData(prev => ({ ...prev, passwordConfirm: e.target.value }))}
+                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700" 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4">
+                    <button 
+                      type="button"
+                      onClick={() => setIsSellModalOpen(false)}
+                      className="py-4 rounded-2xl bg-slate-100 text-slate-400 font-bold hover:bg-slate-200 transition-all"
+                    >
+                      বাতিল
+                    </button>
+                    <button 
+                      type="submit" 
+                      className="py-4 rounded-2xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                    >
+                      SALE CONFIRM
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
